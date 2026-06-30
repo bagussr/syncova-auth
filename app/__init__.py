@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     REDIS_PORT: int
     REDIS_PASSWORD: str
     JWT_SECRET: str
+    ENV: str
 
 
 settings = Settings()

@@ -10,6 +10,7 @@ class BaseSettings(BaseSettings):
     REDIS_PORT: int
     REDIS_PASSWORD: str
     JWT_SECRET: str
+    ENV: str
 
     class Config:
         env_file = ".env"
