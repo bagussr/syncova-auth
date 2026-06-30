@@ -5,6 +5,8 @@ from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
+from app.models.users import Users
+
 load_dotenv()
 
 # this is the Alembic Config object, which provides
@@ -24,7 +26,7 @@ config.set_main_option("sqlalchemy.url", os.getenv("DB_URL"))
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = [Users.metadata]
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
