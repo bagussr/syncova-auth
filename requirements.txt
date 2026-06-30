@@ -80,7 +80,7 @@ markupsafe==3.0.3
     #   mako
 mdurl==0.1.2
     # via markdown-it-py
-psycopg2==2.9.12
+psycopg2-binary==2.9.12
     # via syncova-auth
 pyasn1==0.6.3
     # via
