@@ -1,9 +1,12 @@
 from fastapi import APIRouter, HTTPException
 
 from app.controller.auth import AuthController
+from app.middleware.authentication import REFRESH_AUTH
 from app.models import DbSession
 from app.schemas import BaseResponseCreateSchema
 from app.schemas.auth import (
+    RefreshTokenSchema,
+    SignInResponseSchema,
     SignUpRequestSchema,
     UserProfileSchema,
 )
@@ -12,6 +15,27 @@ from app.utils.settings import Settings
 controller = AuthController()
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+@router.post(
+    "/refresh",
+    description="Refresh the access token using the refresh token (Bearer the refresh token)",
+)
+def refresh_token(
+    data: RefreshTokenSchema, auth: REFRESH_AUTH
+) -> BaseResponseCreateSchema[SignInResponseSchema]:
+    """
+    Refresh Token Endpoint
+    """
+    response = BaseResponseCreateSchema[SignInResponseSchema]()
+    try:
+        result = controller.refresh_token(auth, data.refresh_token)
+        response.success(result, "Token refreshed successfully", SignInResponseSchema)
+    except HTTPException as e:
+        response.error(e.detail, e.status_code)
+    except Exception as e:
+        response.error(str(e), 500)
+    return response()
 
 
 @router.post("/sign-in")

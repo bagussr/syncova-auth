@@ -1,4 +1,5 @@
 import datetime
+import os
 
 from fastapi import HTTPException, status
 from jose import jwt
@@ -19,6 +20,51 @@ class AuthController:
     """
     Controller for handling authentication-related operations.
     """
+
+    def refresh_token(
+        self, db: DbSession, access_token, refresh_token: str, setting: BaseSettings
+    ) -> SignInResponseSchema:
+        """Refresh the access token for a user."""
+        try:
+            payload = jwt.decode(
+                refresh_token,
+                key=os.getenv("SECRET_KEY", "secret"),
+                access_token=access_token,
+            )
+            token = jwt.encode(
+                {
+                    "uuid": payload["uuid"],
+                    "email": payload["email"],
+                    "role": payload["role"],
+                    "is_active": payload["is_active"],
+                    "exp": datetime.datetime.now(datetime.timezone.utc)
+                    + datetime.timedelta(hours=24),
+                },
+                key=os.getenv("SECRET_KEY", "secret"),
+            )
+            new_refresh_token = jwt.encode(
+                {
+                    "uuid": payload["uuid"],
+                    "email": payload["email"],
+                    "role": payload["role"],
+                    "is_active": payload["is_active"],
+                    "exp": datetime.datetime.now(datetime.timezone.utc)
+                    + datetime.timedelta(days=7),
+                },
+                key=os.getenv("SECRET_KEY", "secret"),
+                access_token=token,
+            )
+            return SignInResponseSchema(
+                access_token=token,
+                refresh_token=new_refresh_token,
+                token_type="bearer",
+                expired_in=datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(hours=24),
+            )
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Refresh token expired")
+        except jwt.JWTError:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     def sign_in(
         self, db: DbSession, payload: SignInRequestSchema, setting: BaseSettings

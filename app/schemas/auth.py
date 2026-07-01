@@ -57,3 +57,9 @@ class SignInResponseSchema(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class RefreshTokenSchema(BaseModel):
+    """Payload for refreshing the access token."""
+
+    refresh_token: str
