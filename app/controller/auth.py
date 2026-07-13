@@ -12,7 +12,7 @@ from app.schemas.auth import (
     SignInResponseSchema,
     SignUpRequestSchema,
 )
-from app.utils.password import hash_password
+from app.utils.password import hash_password, verify_password
 from app.utils.settings import BaseSettings
 
 
@@ -20,6 +20,15 @@ class AuthController:
     """
     Controller for handling authentication-related operations.
     """
+
+    def get_user_by_uuid(self, db: DbSession, uuid: str) -> Users:
+        """Retrieve a user by their UUID."""
+        user = db.execute(select(Users).where(Users.uuid == uuid)).scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+        return user
 
     def refresh_token(
         self, db: DbSession, access_token, refresh_token: str, setting: BaseSettings
@@ -35,7 +44,6 @@ class AuthController:
                 {
                     "uuid": payload["uuid"],
                     "email": payload["email"],
-                    "role": payload["role"],
                     "is_active": payload["is_active"],
                     "exp": datetime.datetime.now(datetime.timezone.utc)
                     + datetime.timedelta(hours=24),
@@ -46,7 +54,6 @@ class AuthController:
                 {
                     "uuid": payload["uuid"],
                     "email": payload["email"],
-                    "role": payload["role"],
                     "is_active": payload["is_active"],
                     "exp": datetime.datetime.now(datetime.timezone.utc)
                     + datetime.timedelta(days=7),
@@ -75,7 +82,12 @@ class AuthController:
             select(Users).where(
                 Users.email == payload.email,
                 Users.auth_provider == payload.provider,
-                Users.provider_subject == payload.provider_subject,
+                Users.provider_subject
+                == (
+                    payload.provider_subject
+                    if payload.provider_subject is not None
+                    else payload.email
+                ),
             )
         ).scalar_one_or_none()
 
@@ -91,7 +103,7 @@ class AuthController:
                 detail="Password is required for email sign-in",
             )
 
-        if payload.provider == "email" and not self.verify_password(
+        if payload.provider == "email" and not verify_password(
             payload.password, user.password_hash
         ):
             raise HTTPException(
@@ -101,7 +113,9 @@ class AuthController:
 
         token = jwt.encode(
             {
-                "user_id": user.id,
+                "uuid": str(user.uuid),
+                "email": user.email,
+                "is_active": user.is_active,
                 "exp": datetime.datetime.now(datetime.timezone.utc)
                 + datetime.timedelta(hours=24),
             },
@@ -110,7 +124,9 @@ class AuthController:
         )
         refresh_token = jwt.encode(
             {
-                "user_id": user.id,
+                "uuid": str(user.uuid),
+                "email": user.email,
+                "is_active": user.is_active,
                 "exp": datetime.datetime.now(datetime.timezone.utc)
                 + datetime.timedelta(days=7),
             },

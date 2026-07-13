@@ -10,7 +10,7 @@ class SignUpRequestSchema(BaseModel):
     full_name: str | None = Field(min_length=2, max_length=150)
     password: str | None = Field(min_length=8, max_length=255)
     provider: AuthProvider
-    provider_subject: str | None = Field(min_length=2, max_length=255)
+    provider_subject: str | None = Field(None, min_length=2, max_length=255)
 
     @model_validator(mode="before")
     def validate_provider_subject(cls, values):
@@ -19,6 +19,9 @@ class SignUpRequestSchema(BaseModel):
 
         if provider != AuthProvider.EMAIL and not provider_subject:
             raise ValueError("provider_subject is required for social sign-up")
+
+        if provider == AuthProvider.EMAIL:
+            values["provider_subject"] = values.get("email")
         return values
 
 
@@ -28,7 +31,7 @@ class SignInRequestSchema(BaseModel):
     email: EmailStr
     password: str | None = Field(min_length=8, max_length=255)
     provider: AuthProvider
-    provider_subject: str | None = Field(min_length=2, max_length=255)
+    provider_subject: str | None = Field(None, min_length=2, max_length=255)
 
     @model_validator(mode="before")
     def validate_provider_subject(cls, values):
@@ -49,6 +52,10 @@ class UserProfileSchema(BaseModel):
     full_name: str | None
     provider: AuthProvider
 
+    model_config = {
+        "from_attributes": True,
+    }
+
 
 class SignInResponseSchema(BaseModel):
     """Response schema for sign-in."""
@@ -63,3 +70,11 @@ class RefreshTokenSchema(BaseModel):
     """Payload for refreshing the access token."""
 
     refresh_token: str
+
+
+class ClaimTokenSchema(BaseModel):
+    """Schema for claims in the JWT token."""
+
+    uuid: str
+    email: EmailStr
+    is_active: bool
