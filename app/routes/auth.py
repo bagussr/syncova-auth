@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from app.controller.auth import AuthController
 from app.middleware.authentication import AUTH, REFRESH_AUTH
 from app.models import DbSession
-from app.schemas import BaseResponseCreateSchema
+from app.schemas import BaseResponseCreateSchema, BaseResponseSchema
 from app.schemas.auth import (
     RefreshTokenSchema,
     SignInRequestSchema,
@@ -62,8 +62,8 @@ def sign_up(payload: SignUpRequestSchema, db: DbSession):
 
 
 @router.get("/profile", status_code=200)
-def get_profile(auth: AUTH, db: DbSession):
-    response = BaseResponseCreateSchema[UserProfileSchema]()
+def get_profile(auth: AUTH, db: DbSession) -> BaseResponseSchema:
+    response = BaseResponseSchema()
     try:
         user = controller.get_user_by_uuid(db, auth.uuid)
         response.success(user, "User profile retrieved")
@@ -73,8 +73,8 @@ def get_profile(auth: AUTH, db: DbSession):
 
 
 @router.get("/verify_token", status_code=200)
-def verify_token(auth: AUTH) -> BaseResponseCreateSchema:
-    response = BaseResponseCreateSchema()
+def verify_token(auth: AUTH) -> BaseResponseSchema:
+    response = BaseResponseSchema()
     try:
         print(auth)
         response.success(True, "Token is valid")
