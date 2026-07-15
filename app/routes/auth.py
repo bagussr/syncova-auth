@@ -1,10 +1,14 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, HTTPException
 
 from app.controller.auth import AuthController
+from app.integrations.redis import Cache
 from app.middleware.authentication import AUTH, REFRESH_AUTH
 from app.models import DbSession
 from app.schemas import BaseResponseCreateSchema, BaseResponseSchema
 from app.schemas.auth import (
+    ClaimTokenSchema,
     RefreshTokenSchema,
     SignInRequestSchema,
     SignInResponseSchema,
@@ -62,9 +66,19 @@ def sign_up(payload: SignUpRequestSchema, db: DbSession):
 
 
 @router.get("/profile", status_code=200)
-def get_profile(auth: AUTH, db: DbSession) -> BaseResponseSchema:
+def get_profile(auth: AUTH, db: DbSession, cache: Cache) -> BaseResponseSchema:
     response = BaseResponseSchema()
     try:
+        cache.set_value(
+            f"user_profile:{auth.uuid}",
+            auth.model_dump_json(),
+            expire=timedelta(days=1),
+        )
+        cached = cache.get_value(f"user_profile:{auth.uuid}")
+        if cached:
+            user = ClaimTokenSchema.model_validate_json(cached)
+            response.success(user, "User profile retrieved from cache")
+            return response()
         user = controller.get_user_by_uuid(db, auth.uuid)
         response.success(user, "User profile retrieved")
     except HTTPException as e:
@@ -76,7 +90,6 @@ def get_profile(auth: AUTH, db: DbSession) -> BaseResponseSchema:
 def verify_token(auth: AUTH) -> BaseResponseSchema:
     response = BaseResponseSchema()
     try:
-        print(auth)
         response.success(True, "Token is valid")
     except HTTPException as e:
         response.error(e.detail, e.status_code)

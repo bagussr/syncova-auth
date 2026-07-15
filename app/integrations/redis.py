@@ -1,3 +1,6 @@
+from typing import Annotated
+
+from fastapi.params import Depends
 from redis import ConnectionPool, Redis
 
 from app import settings
@@ -35,3 +38,6 @@ class RedisService:
 
     def delete_value(self, key: str) -> None:
         self.client.delete(key)
+
+
+Cache = Annotated[RedisService, Depends(RedisService)]
